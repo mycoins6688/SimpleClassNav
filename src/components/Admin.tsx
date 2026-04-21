@@ -148,9 +148,19 @@ export default function Admin({ onBack }: { onBack: () => void }) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    
+    const envUsername = import.meta.env.VITE_ADMIN_USERNAME;
+    const envPassword = import.meta.env.VITE_ADMIN_PASSWORD;
+
+    if (!envUsername || !envPassword) {
+      setError('后台认证配置缺失，请在环境变量中设置 VITE_ADMIN_USERNAME 和 VITE_ADMIN_PASSWORD');
+      setLoading(false);
+      return;
+    }
+
     try {
-      // Step 1: Check local password (fast)
-      if (username === 'admin' && password === '1234qwre') {
+      // Step 1: Check credentials from env
+      if (username === envUsername && password === envPassword) {
         // Step 2: Authenticate with Firebase for DB access
         await signInAnonymously(auth);
         setIsLoggedIn(true);
