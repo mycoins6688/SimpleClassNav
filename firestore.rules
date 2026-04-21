@@ -58,6 +58,13 @@ service cloud.firestore {
     match /settings/global {
       allow read: if true;
       allow write: if isSignedIn();
+      
+      function isValidConfig(data) {
+        return data.keys().hasAny(['siteTitle', 'siteKeywords', 'siteDescription', 'updatedAt']);
+      }
+      
+      allow update: if isSignedIn() && isValidConfig(incoming());
+      allow create: if isSignedIn() && isValidConfig(incoming());
     }
   }
 }

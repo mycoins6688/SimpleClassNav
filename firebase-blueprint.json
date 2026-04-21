@@ -21,6 +21,9 @@
       "description": "App-wide configuration or metadata",
       "type": "object",
       "properties": {
+        "siteTitle": { "type": "string" },
+        "siteKeywords": { "type": "string" },
+        "siteDescription": { "type": "string" },
         "updatedAt": { "type": "string", "format": "date-time" }
       }
     }

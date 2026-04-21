@@ -27,46 +27,81 @@ import { categories as initialCategories } from './data';
 import { Product, Category, LayoutType, DisplayMode } from './types';
 import Admin from './components/Admin';
 import { db } from './lib/firebase';
-import { collection, query, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, getDocs, doc, getDoc } from 'firebase/firestore';
 
 export default function App() {
   const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [siteSettings, setSiteSettings] = useState({ 
+    siteTitle: 'OmniGallery - Product Explorer', 
+    siteKeywords: 'AI, Compute, Token', 
+    siteDescription: 'A high-end product explorer.' 
+  });
   const [loading, setLoading] = useState(true);
 
   const allProducts = categories.flatMap(c => (c.products || []) as Product[]);
   const [view, setView] = useState<'gallery' | 'admin'>('gallery'); 
   const [activeCategory, setActiveCategory] = useState<string>(initialCategories[0].id);
 
-  // Fetch categories from Firestore
+  // Fetch data and settings from Firestore
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
+        // Fetch Categories
         const q = query(collection(db, 'categories'));
         const querySnapshot = await getDocs(q);
-        const fetched: Category[] = [];
+        const fetchedCats: Category[] = [];
         querySnapshot.forEach((doc) => {
-          fetched.push({ ...doc.data() } as Category);
+          fetchedCats.push({ ...doc.data() } as Category);
         });
         
-        if (fetched.length > 0) {
-          // Manually sort since index might not be ready
-          fetched.sort((a, b) => a.id.localeCompare(b.id));
-          setCategories(fetched);
-          setActiveCategory(fetched[0].id);
+        if (fetchedCats.length > 0) {
+          fetchedCats.sort((a, b) => a.id.localeCompare(b.id));
+          setCategories(fetchedCats);
+          setActiveCategory(fetchedCats[0].id);
+        }
+
+        // Fetch Site Settings
+        const settingsSnap = await getDoc(doc(db, 'settings', 'global'));
+        if (settingsSnap.exists()) {
+          const data = settingsSnap.data() as any;
+          setSiteSettings({
+            siteTitle: data.siteTitle || siteSettings.siteTitle,
+            siteKeywords: data.siteKeywords || siteSettings.siteKeywords,
+            siteDescription: data.siteDescription || siteSettings.siteDescription
+          });
         }
       } catch (err: any) {
-        console.error('Error fetching categories:', err);
-        // Fallback or show error state
-        if (err.message?.includes('permissions')) {
-          console.warn('Firestore fallback to local data due to permissions');
-        }
+        console.error('Error fetching data:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCategories();
+    fetchData();
   }, []);
+
+  // Sync Meta Tags with Site Settings
+  useEffect(() => {
+    document.title = siteSettings.siteTitle;
+    
+    // Update description meta
+    let descMeta = document.querySelector('meta[name="description"]');
+    if (!descMeta) {
+      descMeta = document.createElement('meta');
+      descMeta.setAttribute('name', 'description');
+      document.head.appendChild(descMeta);
+    }
+    descMeta.setAttribute('content', siteSettings.siteDescription);
+
+    // Update keywords meta
+    let keywordsMeta = document.querySelector('meta[name="keywords"]');
+    if (!keywordsMeta) {
+      keywordsMeta = document.createElement('meta');
+      keywordsMeta.setAttribute('name', 'keywords');
+      document.head.appendChild(keywordsMeta);
+    }
+    keywordsMeta.setAttribute('content', siteSettings.siteKeywords);
+  }, [siteSettings]);
 
   const [hoveredProductId, setHoveredProductId] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);

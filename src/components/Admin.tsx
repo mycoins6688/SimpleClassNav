@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { 
-  ArrowLeft, LogOut, Plus, Trash2, Edit3, Save, X, PlusCircle, ShieldCheck, Database
+  ArrowLeft, LogOut, Plus, Trash2, Edit3, Save, X, PlusCircle, ShieldCheck, Database, Globe
 } from 'lucide-react';
 import { Category, Product } from '../types';
 import { db, auth } from '../lib/firebase';
-import { collection, query, getDocs, doc, setDoc, deleteDoc, writeBatch, orderBy } from 'firebase/firestore';
+import { collection, query, getDocs, doc, setDoc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 import { categories as localData } from '../data';
 
@@ -16,6 +16,8 @@ export default function Admin({ onBack }: { onBack: () => void }) {
   const [error, setError] = useState('');
   
   const [data, setData] = useState<Category[]>([]);
+  const [settings, setSettings] = useState({ siteTitle: '', siteKeywords: '', siteDescription: '' });
+  const [editingSettings, setEditingSettings] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
@@ -45,6 +47,11 @@ export default function Admin({ onBack }: { onBack: () => void }) {
       });
       fetched.sort((a, b) => a.id.localeCompare(b.id));
       setData(fetched);
+
+      const settingsSnap = await getDoc(doc(db, 'settings', 'global'));
+      if (settingsSnap.exists()) {
+        setSettings(settingsSnap.data() as any);
+      }
     } catch (err: any) {
       console.error('Failed to fetch from Firestore', err);
       // Don't alert here to avoid blocking app init
@@ -258,6 +265,21 @@ export default function Admin({ onBack }: { onBack: () => void }) {
     });
   };
 
+  const saveSettings = async () => {
+    setSaving(true);
+    try {
+      await setDoc(doc(db, 'settings', 'global'), {
+        ...settings,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      setEditingSettings(false);
+    } catch (err) {
+      alert('保存设置失败');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1)_0%,transparent_100%)]">
@@ -374,6 +396,69 @@ export default function Admin({ onBack }: { onBack: () => void }) {
       </header>
 
       <main className="flex-1 max-w-6xl w-full mx-auto p-6 md:p-12 space-y-12">
+        <section className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold flex items-center gap-2"><Globe size={20} className="text-brand-blue" /> 网站 SEO 设置</h2>
+            {!editingSettings ? (
+              <button 
+                onClick={() => setEditingSettings(true)}
+                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-sm rounded-lg flex items-center gap-2"
+              >
+                <Edit3 size={16} /> 编辑设置
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={saveSettings}
+                  className="px-4 py-2 bg-brand-blue text-white text-sm font-bold rounded-lg flex items-center gap-2"
+                >
+                  <Save size={16} /> 保存设置
+                </button>
+                <button 
+                  onClick={() => setEditingSettings(false)}
+                  className="px-4 py-2 bg-white/5 hover:bg-white/10 text-sm rounded-lg"
+                >
+                  取消
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs text-zinc-500 uppercase tracking-widest mb-1.5 font-bold">页面标题 (Title)</label>
+                <input 
+                  disabled={!editingSettings}
+                  value={settings.siteTitle}
+                  onChange={e => setSettings({...settings, siteTitle: e.target.value})}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm disabled:opacity-50"
+                  placeholder="例如: 极客 AI 算力货源站"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-zinc-500 uppercase tracking-widest mb-1.5 font-bold">网站关键词 (Keywords)</label>
+                <input 
+                  disabled={!editingSettings}
+                  value={settings.siteKeywords}
+                  onChange={e => setSettings({...settings, siteKeywords: e.target.value})}
+                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm disabled:opacity-50"
+                  placeholder="关键词以英文逗号分隔"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-zinc-500 uppercase tracking-widest mb-1.5 font-bold">网站描述 (Description)</label>
+              <textarea 
+                disabled={!editingSettings}
+                value={settings.siteDescription}
+                onChange={e => setSettings({...settings, siteDescription: e.target.value})}
+                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-sm h-[110px] resize-none disabled:opacity-50"
+                placeholder="简短介绍您的网站内容..."
+              />
+            </div>
+          </div>
+        </section>
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-display font-black tracking-tight">分类与产品集</h1>
