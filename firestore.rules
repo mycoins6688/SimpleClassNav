@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ---------------------------------------------------------
+    // Phase 3: Primitive Definitions
+    // ---------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // ---------------------------------------------------------
+    // Global Safety Net (Default Deny)
+    // ---------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ---------------------------------------------------------
+    // Category Collection
+    // ---------------------------------------------------------
+    match /categories/{categoryId} {
+      // Pillar 8: Secure List Queries
+      // Public navigation, anyone can read.
+      allow read: if true;
+      
+      // Pillar 2: Validation Blueprints
+      function isValidCategory(data) {
+        return data.keys().hasAll(['id', 'name', 'displayMode', 'products']) &&
+               data.id is string && data.id.size() <= 100 &&
+               data.name is string && data.name.size() <= 100 &&
+               data.displayMode in ['card', 'tile'] &&
+               data.products is list && data.products.size() <= 200;
+      }
+      
+      // Pillar 4 & 9: Update Guards
+      allow create: if isSignedIn() && isValidCategory(incoming()) && isValidId(categoryId);
+      
+      allow update: if isSignedIn() && isValidCategory(incoming()) && (
+        // Action: Generic Edit
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'displayMode', 'products', 'background', 'accentColor', 'layout'])
+      );
+      
+      allow delete: if isSignedIn();
+    }
+    
+    match /settings/global {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+  }
+}

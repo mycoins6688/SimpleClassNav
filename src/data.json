@@ -1,0 +1,91 @@
+[
+  {
+    "id": "ai-compute",
+    "name": "AI 算力资源",
+    "description": "顶级 AI 算力与 GPU 资源链接，助力模型训练与推理。",
+    "layout": "grid",
+    "displayMode": "card",
+    "background": "bg-slate-950",
+    "accentColor": "#3b82f6",
+    "products": [
+      {
+        "id": "gpu-h100",
+        "name": "NVIDIA H100 GPU 算力集群",
+        "sortOrder": 1,
+        "description": "顶级 AI 算力服务，专为大规模模型训练设计，低延迟高速网络。",
+        "price": "咨询定价",
+        "image": "https://images.unsplash.com/photo-1591453088216-37b774673df8?q=80&w=800&auto=format",
+        "category": "ai-compute",
+        "url": "https://tokenplus.io",
+        "details": ["80GB HBM3", "第四代 Tensor Cores", "NVLink 互联", "按量付费"],
+        "logo": "https://tokenplus.io/favicon.ico"
+      },
+      {
+        "id": "gpu-a100",
+        "name": "NVIDIA A100 弹性算力",
+        "sortOrder": 2,
+        "description": "高性能 AI 推理与训练环境，支持多种主流 AI 框架。",
+        "price": "按需付费",
+        "image": "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=800&auto=format",
+        "category": "ai-compute",
+        "url": "https://tokenplus.io",
+        "details": ["MIG 技术", "80GB 显存", "无缝迁移", "高性价比"]
+      }
+    ]
+  },
+  {
+    "id": "token-exchange",
+    "name": "Token 交易市场",
+    "description": "安全可靠的 Token 二级交易所，提供高效的流动性支持。",
+    "layout": "grid",
+    "displayMode": "tile",
+    "background": "bg-zinc-900",
+    "accentColor": "#10b981",
+    "products": [
+      {
+        "id": "token-spot",
+        "name": "Token 现货交易",
+        "sortOrder": 10,
+        "description": "支持多种主流 Token 实时现货交易，深度优厚。",
+        "price": "极低费率",
+        "image": "https://images.unsplash.com/photo-1621761191319-c6fb62004040?q=80&w=800&auto=format",
+        "category": "token-exchange",
+        "url": "https://tokenplus.io",
+        "details": ["毫秒级响应", "多链支持", "安全审计", "24/7 监控"]
+      }
+    ]
+  },
+  {
+    "id": "api-service",
+    "name": "API 服务批发",
+    "description": "全球领先的 API TOKEN 货源批发集市，覆盖主流 AI 模型。",
+    "layout": "grid",
+    "displayMode": "card",
+    "background": "bg-neutral-950",
+    "accentColor": "#f59e0b",
+    "products": [
+      {
+        "id": "claude-api-bulk",
+        "name": "Claude API 批发",
+        "sortOrder": 1,
+        "description": "Anthropic Claude 全系列模型 API，支持 Claude 3.5 Sonnet。",
+        "price": "货源稳定",
+        "image": "https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=800&auto=format",
+        "category": "api-service",
+        "url": "https://tokenplus.io",
+        "details": ["200K 上下文", "逻辑严密", "货源保障", "独立密钥"]
+      },
+      {
+        "id": "gpt-api-bulk",
+        "name": "ChatGPT API 批发",
+        "sortOrder": 5,
+        "description": "全系列 GPT 模型 API 货源批发，稳定不掉线。",
+        "price": "特惠价格",
+        "image": "https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=800&auto=format",
+        "category": "api-service",
+        "url": "https://tokenplus.io",
+        "details": ["GPT-4o 支持", "高并发上限", "即买即用", "渠道分销"]
+      }
+    ]
+  }
+]

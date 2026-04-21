@@ -1,0 +1,38 @@
+{
+  "entities": {
+    "Category": {
+      "title": "Category",
+      "description": "Product category and layout configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "layout": { "type": "string" },
+        "displayMode": { "type": "string", "enum": ["card", "tile"] },
+        "background": { "type": "string" },
+        "accentColor": { "type": "string" },
+        "products": { "type": "array" }
+      },
+      "required": ["id", "name", "displayMode"]
+    },
+    "Config": {
+      "title": "Global Config",
+      "description": "App-wide configuration or metadata",
+      "type": "object",
+      "properties": {
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "categories": {
+      "schema": "Category",
+      "description": "Collection of all product categories"
+    },
+    "settings/global": {
+      "schema": "Config",
+      "description": "Global settings document"
+    }
+  }
+}

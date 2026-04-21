@@ -23,14 +23,56 @@ import {
   ShieldCheck,
   ExternalLink
 } from 'lucide-react';
-import { categories, products } from './data';
+import { categories as initialCategories } from './data';
 import { Product, Category, LayoutType, DisplayMode } from './types';
+import Admin from './components/Admin';
+import { db } from './lib/firebase';
+import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 
 export default function App() {
-  const [activeCategory, setActiveCategory] = useState<string>(categories[0].id);
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [loading, setLoading] = useState(true);
+
+  const allProducts = categories.flatMap(c => (c.products || []) as Product[]);
+  const [view, setView] = useState<'gallery' | 'admin'>('gallery'); 
+  const [activeCategory, setActiveCategory] = useState<string>(initialCategories[0].id);
+
+  // Fetch categories from Firestore
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const q = query(collection(db, 'categories'));
+        const querySnapshot = await getDocs(q);
+        const fetched: Category[] = [];
+        querySnapshot.forEach((doc) => {
+          fetched.push({ ...doc.data() } as Category);
+        });
+        
+        if (fetched.length > 0) {
+          // Manually sort since index might not be ready
+          fetched.sort((a, b) => a.id.localeCompare(b.id));
+          setCategories(fetched);
+          setActiveCategory(fetched[0].id);
+        }
+      } catch (err: any) {
+        console.error('Error fetching categories:', err);
+        // Fallback or show error state
+        if (err.message?.includes('permissions')) {
+          console.warn('Firestore fallback to local data due to permissions');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   const [hoveredProductId, setHoveredProductId] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [showBackToTop, setShowBackToTop] = useState(false);
+
+  // ... 之前的逻辑保持一致，但需要处理 Admin 视图
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ container: scrollContainerRef });
@@ -42,16 +84,35 @@ export default function App() {
 
   // Scroll Spy and Back to Top logic
   useEffect(() => {
+    const schemaData = {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "itemListElement": allProducts.map((p, index) => ({
+        "@type": "ListItem",
+        "position": index + 1,
+        "item": {
+          "@type": "Product",
+          "name": p.name,
+          "description": p.description,
+          "image": p.image,
+          "url": p.url
+        }
+      }))
+    };
+    
+    const script = document.createElement('script');
+    script.id = 'product-schema';
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify(schemaData);
+    document.head.appendChild(script);
+    
     const container = scrollContainerRef.current;
     if (!container) return;
 
     const handleScroll = () => {
       const sections = categories.map(cat => document.getElementById(`section-${cat.id}`));
       const scrollPos = container.scrollTop + 150;
-
-      // Back to top visibility
       setShowBackToTop(container.scrollTop > 500);
-
       sections.forEach((section, index) => {
         if (section && scrollPos >= section.offsetTop && scrollPos < section.offsetTop + section.offsetHeight) {
           setActiveCategory(categories[index].id);
@@ -60,7 +121,11 @@ export default function App() {
     };
 
     container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      const s = document.getElementById('product-schema');
+      if (s) s.remove();
+    };
   }, []);
 
   const scrollToCategory = (id: string) => {
@@ -76,12 +141,16 @@ export default function App() {
 
   const scrollToTop = () => {
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
+      scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+
+  if (view === 'admin') {
+    return <Admin onBack={() => {
+      setView('gallery');
+      window.location.reload(); 
+    }} />;
+  }
 
   return (
     <div className="flex h-screen w-full bg-zinc-950 overflow-hidden font-sans relative selection:bg-brand-blue/30 selection:text-white">
@@ -175,6 +244,9 @@ export default function App() {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="flex-1 relative overflow-hidden flex flex-col"
       >
+        {/* Header Content for SEO */}
+        <h1 className="sr-only">TokenPlus - 全球领先的 AI 资源、GPU 算力与 API 货源批发链接器</h1>
+
         {/* TokenPlus Header */}
         <header className="h-16 border-b border-white/10 glass flex items-center justify-between px-6 md:px-12 z-40 shrink-0">
           <div className="flex items-center gap-8">
@@ -265,7 +337,9 @@ export default function App() {
               <CategorySection 
                 key={category.id} 
                 category={category} 
-                products={products.filter(p => p.category === category.id)}
+                products={
+                  [...(category.products || [])].sort((a, b) => (a.sortOrder || 999) - (b.sortOrder || 999))
+                }
                 hoveredProductId={hoveredProductId}
                 setHoveredProductId={setHoveredProductId}
               />
@@ -343,9 +417,17 @@ export default function App() {
               </div>
 
               <div className="flex flex-col md:flex-row items-center justify-between pt-8 border-t border-white/5 gap-4">
-                <p className="text-zinc-600 text-xs">
-                  AI 资源与服务链接器 © 2026 TokenPlus.io | <span className="text-zinc-500">service@tokenplus.io</span>
-                </p>
+                <div className="flex items-center gap-4">
+                  <p className="text-zinc-600 text-xs">
+                    AI 资源与服务链接器 © 2026 TokenPlus.io | <span className="text-zinc-500">service@tokenplus.io</span>
+                  </p>
+                  <button 
+                    onClick={() => setView('admin')}
+                    className="text-zinc-700 hover:text-zinc-500 transition-colors text-[10px] uppercase tracking-widest font-bold"
+                  >
+                    管理后台
+                  </button>
+                </div>
                 <div className="flex items-center gap-6">
                   <span className="flex items-center gap-1.5 text-zinc-600 text-xs">
                     <ShieldCheck size={14} />
@@ -399,7 +481,7 @@ function CategorySection({
   setHoveredProductId
 }: CategorySectionProps) {
   return (
-    <section id={`section-${category.id}`} className="relative">
+    <section id={`section-${category.id}`} className="relative" aria-labelledby={`title-${category.id}`}>
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -408,7 +490,8 @@ function CategorySection({
         className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6"
       >
         <div>
-          <motion.h3 
+          <motion.h2 
+            id={`title-${category.id}`}
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
@@ -418,7 +501,7 @@ function CategorySection({
             {category.name.split(' ').map((word, i) => (
               <span key={i} className={i === 0 ? 'text-white' : 'text-white/30'}>{word} </span>
             ))}
-          </motion.h3>
+          </motion.h2>
           <motion.p 
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
@@ -474,6 +557,7 @@ function TileCard({ product }: { product: Product }) {
       target="_blank"
       rel="noopener noreferrer"
       layout
+      aria-label={`${product.name} - ${product.description}`}
       whileHover={{ 
         scale: 1.05, 
         y: -10,
@@ -483,30 +567,32 @@ function TileCard({ product }: { product: Product }) {
       initial={{ opacity: 0, scale: 0.9 }}
       whileInView={{ opacity: 1, scale: 1 }}
       viewport={{ once: true }}
-      className="group flex items-center gap-4 p-4 rounded-xl bg-zinc-800/50 backdrop-blur-xl border border-white/10 hover:border-brand-blue/50 transition-all duration-500 h-24 relative overflow-hidden"
+      className="group flex flex-col justify-center p-4 rounded-xl bg-zinc-800/50 backdrop-blur-xl border border-white/10 hover:border-brand-blue/50 transition-all duration-500 h-24 relative overflow-hidden"
     >
-      {product.logo ? (
-        <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border border-white/10 group-hover:border-brand-blue/30 transition-colors z-10">
-          <img 
-            src={product.logo} 
-            alt={`${product.name} logo`} 
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-            referrerPolicy="no-referrer"
-          />
+      <article className="flex items-center gap-4 w-full h-full relative z-10">
+        {product.logo ? (
+          <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border border-white/10 group-hover:border-brand-blue/30 transition-colors">
+            <img 
+              src={product.logo} 
+              alt={`${product.name} 图标`} 
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        ) : (
+          <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/10 group-hover:bg-brand-blue/10 group-hover:border-brand-blue/20 transition-all duration-500">
+            <LayoutGrid size={20} className="text-zinc-600 group-hover:text-brand-blue transition-colors" />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <h4 className="font-display font-bold text-sm text-white group-hover:text-brand-blue transition-colors truncate">
+            {product.name}
+          </h4>
+          <p className="text-zinc-500 text-[11px] line-clamp-2 leading-snug mt-1 group-hover:text-zinc-400 transition-colors">
+            {product.description}
+          </p>
         </div>
-      ) : (
-        <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/10 group-hover:bg-brand-blue/10 group-hover:border-brand-blue/20 transition-all duration-500 z-10">
-          <LayoutGrid size={20} className="text-zinc-600 group-hover:text-brand-blue transition-colors" />
-        </div>
-      )}
-      <div className="flex-1 min-w-0 z-10">
-        <h4 className="font-display font-bold text-sm text-white group-hover:text-brand-blue transition-colors truncate">
-          {product.name}
-        </h4>
-        <p className="text-zinc-500 text-[11px] line-clamp-2 leading-snug mt-1 group-hover:text-zinc-400 transition-colors">
-          {product.description}
-        </p>
-      </div>
+      </article>
       
       {/* Subtle background glow on hover */}
       <div className="absolute inset-0 bg-linear-to-tr from-brand-blue/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -539,6 +625,7 @@ function ProductCard({
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
       layout
+      aria-label={`${product.name} - ${product.description}`}
       initial={{ opacity: 0, y: 30, scale: 0.95 }}
       whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true }}
@@ -562,71 +649,73 @@ function ProductCard({
         ${isHovered ? 'border-brand-blue/60 shadow-[0_30px_70px_-15px_rgba(59,130,246,0.5)] z-50' : 'z-10'}
       `}
     >
-      {/* Animated Glow Overlay */}
-      <AnimatePresence>
-        {isHovered && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-linear-to-tr from-brand-blue/10 via-transparent to-brand-blue/5 pointer-events-none z-20"
-          />
-        )}
-      </AnimatePresence>
+      <article>
+        {/* Animated Glow Overlay */}
+        <AnimatePresence>
+          {isHovered && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-linear-to-tr from-brand-blue/10 via-transparent to-brand-blue/5 pointer-events-none z-20"
+            />
+          )}
+        </AnimatePresence>
 
-      {/* The "Blue Box" part from the image */}
-      <div className="relative">
-        <div className="aspect-[16/8] overflow-hidden relative">
-          <motion.img 
-            src={product.image} 
-            alt={product.name}
-            referrerPolicy="no-referrer"
-            animate={{ scale: isHovered ? 1.15 : 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-linear-to-t from-zinc-950 via-transparent to-transparent opacity-40" />
-          
-          {/* Scanline effect for cool tech feel */}
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_2px,3px_100%] pointer-events-none opacity-20" />
-        </div>
+        {/* The "Blue Box" part from the image */}
+        <div className="relative">
+          <div className="aspect-[16/8] overflow-hidden relative">
+            <motion.img 
+              src={product.image} 
+              alt={`${product.name} 详情图`}
+              referrerPolicy="no-referrer"
+              animate={{ scale: isHovered ? 1.15 : 1 }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-linear-to-t from-zinc-950 via-transparent to-transparent opacity-40" />
+            
+            {/* Scanline effect for cool tech feel */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_2px,3px_100%] pointer-events-none opacity-20" />
+          </div>
 
-        <div className="py-2 px-4 bg-zinc-700/60 backdrop-blur-md border-t border-white/10 relative z-10">
-          <div className="flex justify-between items-center">
-            <h4 className="font-display font-bold text-sm text-white group-hover:text-brand-blue transition-colors truncate pr-2">
-              {product.name}
-            </h4>
-            <span className="font-mono text-[10px] font-bold text-zinc-500 shrink-0 group-hover:text-brand-blue/70 transition-colors">{product.price}</span>
+          <div className="py-2 px-4 bg-zinc-700/60 backdrop-blur-md border-t border-white/10 relative z-10">
+            <div className="flex justify-between items-center">
+              <h4 className="font-display font-bold text-sm text-white group-hover:text-brand-blue transition-colors truncate pr-2">
+                {product.name}
+              </h4>
+              <span className="font-mono text-[10px] font-bold text-zinc-500 shrink-0 group-hover:text-brand-blue/70 transition-colors">{product.price}</span>
+            </div>
           </div>
         </div>
-      </div>
-      
-      {/* The Reveal part - Animates height so it doesn't reserve space by default */}
-      <AnimatePresence>
-        {isHovered && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ 
-              height: { type: "spring", stiffness: 200, damping: 25 },
-              opacity: { duration: 0.3 }
-            }}
-            className="overflow-hidden bg-zinc-800/60"
-          >
-            <div className="px-4 pb-4 pt-1">
-              <motion.p 
-                initial={{ y: 10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.1 }}
-                className="text-zinc-500 text-[11px] leading-relaxed line-clamp-2 group-hover:text-zinc-400 transition-colors"
-              >
-                {product.description}
-              </motion.p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        
+        {/* The Reveal part - Animates height so it doesn't reserve space by default */}
+        <AnimatePresence>
+          {isHovered && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ 
+                height: { type: "spring", stiffness: 200, damping: 25 },
+                opacity: { duration: 0.3 }
+              }}
+              className="overflow-hidden bg-zinc-800/60"
+            >
+              <div className="px-4 pb-4 pt-1">
+                <motion.p 
+                  initial={{ y: 10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-zinc-500 text-[11px] leading-relaxed line-clamp-2 group-hover:text-zinc-400 transition-colors"
+                >
+                  {product.description}
+                </motion.p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </article>
 
       {/* SEO Hidden Content */}
       <div className="sr-only">
