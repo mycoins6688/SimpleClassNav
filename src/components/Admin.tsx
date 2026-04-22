@@ -148,28 +148,27 @@ export default function Admin({ onBack }: { onBack: () => void }) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
-    const envUsername = import.meta.env.VITE_ADMIN_USERNAME;
-    const envPassword = import.meta.env.VITE_ADMIN_PASSWORD;
-
-    if (!envUsername || !envPassword) {
-      setError('后台认证配置缺失，请在环境变量中设置 VITE_ADMIN_USERNAME 和 VITE_ADMIN_PASSWORD');
-      setLoading(false);
-      return;
-    }
+    setError('');
 
     try {
-      // Step 1: Check credentials from env
-      if (username === envUsername && password === envPassword) {
+      const response = await fetch('/api/auth/v3/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
         // Step 2: Authenticate with Firebase for DB access
         await signInAnonymously(auth);
         setIsLoggedIn(true);
-        setError('');
       } else {
-        setError('用户名或密码错误');
+        setError(result.message || '用户名或密码错误');
       }
     } catch (err) {
-      setError('Firebase 权限验证失败');
+      console.error('Login error:', err);
+      setError('服务器连接失败，请检查网络');
     } finally {
       setLoading(false);
     }

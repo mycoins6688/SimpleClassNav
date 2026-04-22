@@ -6,6 +6,21 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.use(express.json());
+
+  // Real backend login endpoint V3
+  app.post('/api/auth/v3/login', (req, res) => {
+    const { username, password } = req.body;
+    const realUsername = process.env.VITE_ADMIN_USERNAME || 'admin';
+    const realPassword = process.env.VITE_ADMIN_PASSWORD || '123456';
+
+    if (username === realUsername && password === realPassword) {
+      res.json({ success: true });
+    } else {
+      res.status(401).json({ success: false, message: '用户名或密码错误' });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

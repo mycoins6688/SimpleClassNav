@@ -104,7 +104,7 @@ export default function App() {
   }, [siteSettings]);
 
   const [hoveredProductId, setHoveredProductId] = useState<string | null>(null);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
   // ... 之前的逻辑保持一致，但需要处理 Admin 视图
@@ -352,7 +352,7 @@ export default function App() {
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto scroll-smooth relative"
         >
-          <div className="max-w-6xl mx-auto px-6 md:px-12 py-12 space-y-16 pb-64">
+          <div className="max-w-[1600px] px-6 md:pl-16 md:pr-12 py-12 space-y-16 pb-64">
             {/* Dynamic Background */}
             <div className="fixed inset-0 pointer-events-none z-0">
               <AnimatePresence mode="wait">
@@ -527,10 +527,10 @@ function CategorySection({
         <div>
           <motion.h2 
             id={`title-${category.id}`}
-            initial={{ opacity: 0, x: -30 }}
+            initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.2, type: "spring" }}
+            viewport={{ amount: 0.3 }}
+            transition={{ duration: 0.8, type: "spring", stiffness: 100 }}
             className="text-3xl md:text-5xl font-display font-black tracking-tighter mb-3"
           >
             {category.name.split(' ').map((word, i) => (
@@ -550,18 +550,20 @@ function CategorySection({
       </motion.div>
 
       <div className={`
-        grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4
+        grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6
       `}>
         {products.map((product, idx) => (
           <motion.div
             key={product.id}
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-50px" }}
+            initial={{ opacity: 0, x: -80, scale: 0.95 }}
+            whileInView={{ opacity: 1, x: 0, scale: 1 }}
+            viewport={{ margin: "-20px" }}
             transition={{ 
-              duration: 0.6, 
-              delay: (idx % 4) * 0.1,
-              ease: [0.21, 1.11, 0.81, 0.99] 
+              duration: 0.7, 
+              delay: (idx % 4) * 0.08,
+              type: "spring",
+              stiffness: 120,
+              damping: 14
             }}
           >
             {category.displayMode === 'tile' ? (
