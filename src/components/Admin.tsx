@@ -45,11 +45,12 @@ export default function Admin({ onBack }: { onBack: () => void }) {
       querySnapshot.forEach((doc) => {
         fetched.push({ ...doc.data() } as Category);
       });
+      // Sort categories DESC (Larger = First)
       fetched.sort((a, b) => {
-        const orderA = a.sortOrder ?? 999;
-        const orderB = b.sortOrder ?? 999;
-        if (orderA !== orderB) return orderA - orderB;
-        return a.id.localeCompare(b.id);
+        const orderA = a.sortOrder ?? 0;
+        const orderB = b.sortOrder ?? 0;
+        if (orderA !== orderB) return orderB - orderA;
+        return a.name.localeCompare(b.name);
       });
       setData(fetched);
 
@@ -180,6 +181,7 @@ export default function Admin({ onBack }: { onBack: () => void }) {
   };
 
   const addCategory = async (mode: 'card' | 'tile') => {
+    const nextOrder = data.length > 0 ? Math.max(...data.map(c => c.sortOrder || 0)) + 1 : 1;
     const newCat: Category = {
       id: `cat-${Date.now()}`,
       name: `新${mode === 'card' ? '大图' : '小图'}分类`,
@@ -188,7 +190,7 @@ export default function Admin({ onBack }: { onBack: () => void }) {
       displayMode: mode,
       background: 'bg-zinc-900',
       accentColor: '#3b82f6',
-      sortOrder: (data.length || 0) + 1,
+      sortOrder: nextOrder,
       products: []
     };
     setSaving(true);
@@ -224,7 +226,7 @@ export default function Admin({ onBack }: { onBack: () => void }) {
     if (!cat) return;
 
     const randomIndex = Math.floor(Math.random() * RANDOM_IMGS.length);
-    const newProducts = [...(cat.products || [])];
+    const nextOrder = (cat.products?.length || 0) > 0 ? Math.max(...cat.products!.map(p => p.sortOrder || 0)) + 1 : 1;
     const newProd: Product = {
       id: `prod-${Date.now()}`,
       name: '新产品',
@@ -234,7 +236,7 @@ export default function Admin({ onBack }: { onBack: () => void }) {
       category: catId,
       url: 'https://tokenplus.io',
       details: ['详情1'],
-      sortOrder: (cat.products?.length || 0) + 1,
+      sortOrder: nextOrder,
       isAdminUsed: false
     };
     newProducts.push(newProd);
@@ -524,21 +526,30 @@ export default function Admin({ onBack }: { onBack: () => void }) {
               <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
                 {editingCategory === cat.id ? (
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 mr-4">
-                    <input autoFocus value={tempData.name} onChange={e => setTempData({...tempData, name: e.target.value})} className="bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-sm outline-none focus:border-brand-blue/50" placeholder="分类名称" />
-                    <input value={tempData.description} onChange={e => setTempData({...tempData, description: e.target.value})} className="bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-sm outline-none focus:border-brand-blue/50" placeholder="分类描述" />
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-zinc-500 whitespace-nowrap">排序:</span>
+                    <div>
+                      <label className="block text-[10px] text-zinc-500 mb-1">分类名称</label>
+                      <input autoFocus value={tempData.name} onChange={e => setTempData({...tempData, name: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-sm outline-none focus:border-brand-blue/50" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-zinc-500 mb-1">排序 ID (越大越靠前)</label>
                       <input type="number" value={tempData.sortOrder || 0} onChange={e => setTempData({...tempData, sortOrder: parseInt(e.target.value) || 0})} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-sm outline-none focus:border-brand-blue/50" />
                     </div>
-                    <select value={tempData.displayMode} onChange={e => setTempData({...tempData, displayMode: e.target.value})} className="bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-sm text-zinc-400">
-                      <option value="card">Card (大图)</option>
-                      <option value="tile">Tile (小图列表)</option>
-                    </select>
+                    <div>
+                      <label className="block text-[10px] text-zinc-500 mb-1">显示模式</label>
+                      <select value={tempData.displayMode} onChange={e => setTempData({...tempData, displayMode: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-sm text-zinc-400">
+                        <option value="card">Card (大图)</option>
+                        <option value="tile">Tile (小图列表)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-zinc-500 mb-1">描述</label>
+                      <input value={tempData.description} onChange={e => setTempData({...tempData, description: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-sm outline-none focus:border-brand-blue/50" />
+                    </div>
                   </div>
                 ) : (
                   <div>
                     <h3 className="text-xl font-bold flex items-center gap-3">
-                      <span className="text-zinc-600 font-mono text-sm">#{cat.sortOrder || 0}</span>
+                      <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono text-xs border border-white/5">排序 ID: {cat.sortOrder || 0}</span>
                       {cat.name}
                       <span className="text-[10px] uppercase tracking-widest text-brand-blue bg-brand-blue/10 px-2 py-0.5 rounded-full">{cat.displayMode}</span>
                     </h3>
@@ -571,15 +582,27 @@ export default function Admin({ onBack }: { onBack: () => void }) {
 
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {(cat.products || []).sort((a,b) => (a.sortOrder || 0) - (b.sortOrder || 0)).map(prod => (
+                  {(cat.products || []).sort((a,b) => (b.sortOrder || 0) - (a.sortOrder || 0)).map((prod, index) => (
                     <div key={prod.id} className="p-4 rounded-2xl bg-white/5 border border-white/10 group hover:border-brand-blue/30 transition-all">
                       {editingItem?.prodId === prod.id ? (
                         <div className="space-y-3">
-                          <input autoFocus value={tempData.name} onChange={e => setTempData({...tempData, name: e.target.value})} className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs" placeholder="产品名" />
-                          <textarea value={tempData.description} onChange={e => setTempData({...tempData, description: e.target.value})} className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs h-16" placeholder="描述" />
                           <div className="grid grid-cols-2 gap-2">
-                            <input value={tempData.price} onChange={e => setTempData({...tempData, price: e.target.value})} className="bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs" placeholder="价格标签" />
-                            <input type="number" value={tempData.sortOrder} onChange={e => setTempData({...tempData, sortOrder: parseInt(e.target.value) || 0})} className="bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs" placeholder="排序ID" />
+                            <div>
+                              <label className="block text-[10px] text-zinc-500 mb-1">产品名称</label>
+                              <input autoFocus value={tempData.name} onChange={e => setTempData({...tempData, name: e.target.value})} className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs" />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] text-zinc-500 mb-1">排序 ID (大数在前)</label>
+                              <input type="number" value={tempData.sortOrder || 0} onChange={e => setTempData({...tempData, sortOrder: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs" />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-zinc-500 mb-1">产品描述</label>
+                            <textarea value={tempData.description} onChange={e => setTempData({...tempData, description: e.target.value})} className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs h-16" />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] text-zinc-500 mb-1">产品价格/标签</label>
+                            <input value={tempData.price} onChange={e => setTempData({...tempData, price: e.target.value})} className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs" />
                           </div>
                           <input value={tempData.url} onChange={e => setTempData({...tempData, url: e.target.value})} className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs" placeholder="链接" />
                           <div className="flex gap-2">
@@ -619,9 +642,10 @@ export default function Admin({ onBack }: { onBack: () => void }) {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
                               <h4 className="font-bold text-sm truncate">{prod.name}</h4>
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-2">
+                                <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 font-mono text-[9px] border border-white/5">ID: {prod.sortOrder || 0}</span>
                                 {prod.isAdminUsed && <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]" title="站长使用过" />}
-                                <span className="text-[10px] text-zinc-600 font-mono">#{prod.sortOrder}</span>
+                                <span className="text-[10px] text-zinc-600 font-mono">#{index}</span>
                               </div>
                             </div>
                             <p className="text-zinc-500 text-[10px] line-clamp-2 mt-1">{prod.description}</p>

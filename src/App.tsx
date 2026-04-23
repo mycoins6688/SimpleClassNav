@@ -68,12 +68,12 @@ export default function App() {
         });
         
         if (fetchedCats.length > 0) {
-          // Sort by sortOrder first, then fallback to id
+          // Sort by sortOrder DESC (Larger = First), then fallback to name
           fetchedCats.sort((a, b) => {
-            const orderA = a.sortOrder ?? 999;
-            const orderB = b.sortOrder ?? 999;
-            if (orderA !== orderB) return orderA - orderB;
-            return a.id.localeCompare(b.id);
+            const orderA = a.sortOrder ?? 0;
+            const orderB = b.sortOrder ?? 0;
+            if (orderA !== orderB) return orderB - orderA;
+            return a.name.localeCompare(b.name);
           });
           setCategories(fetchedCats);
           setActiveCategory(fetchedCats[0].id);
@@ -207,32 +207,22 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-zinc-950 overflow-hidden font-sans relative selection:bg-brand-blue/30 selection:text-white">
+    <div className={`flex h-screen w-full overflow-hidden font-sans relative selection:bg-brand-blue/30 selection:text-white transition-colors duration-500 ${isDarkMode ? 'bg-zinc-950 text-white' : 'bg-zinc-50 text-zinc-900'}`}>
       {/* Dynamic Background Elements */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* Grid Pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+        <div className={`absolute inset-0 bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] ${isDarkMode ? 'bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)]' : 'bg-[linear-gradient(to_right,#00000008_1px,transparent_1px),linear-gradient(to_bottom,#00000008_1px,transparent_1px)]'}`} />
         
         {/* Animated Glows */}
         <motion.div 
           animate={{ 
             scale: [1, 1.2, 1],
-            opacity: [0.1, 0.15, 0.1]
+            opacity: isDarkMode ? [0.1, 0.15, 0.1] : [0.05, 0.1, 0.05]
           }}
           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
           className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-brand-blue/20 rounded-full blur-[120px]" 
         />
-        <motion.div 
-          animate={{ 
-            scale: [1, 1.1, 1],
-            opacity: [0.05, 0.1, 0.05]
-          }}
-          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          className="absolute top-[20%] -right-[5%] w-[30%] h-[30%] bg-blue-500/10 rounded-full blur-[100px]" 
-        />
       </div>
-
-      {/* Sidebar Toggle Widget (Removed floating version to fix overlap) */}
 
       {/* Sidebar */}
       <motion.nav 
@@ -243,12 +233,12 @@ export default function App() {
           x: isSidebarCollapsed ? -200 : 0
         }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="h-full border-r border-white/10 flex flex-col glass z-50 relative overflow-hidden shrink-0"
+        className={`h-full border-r flex flex-col z-50 relative overflow-hidden shrink-0 transition-colors duration-500 ${isDarkMode ? 'bg-zinc-900/50 border-white/10' : 'bg-white/80 border-zinc-200 shadow-xl'}`}
       >
-        <div className="p-6 border-b border-white/10 flex items-center justify-end">
+        <div className={`p-6 border-b flex items-center justify-end ${isDarkMode ? 'border-white/10' : 'border-zinc-200'}`}>
           <button 
             onClick={() => setIsSidebarCollapsed(true)}
-            className="p-1.5 hover:bg-white/5 rounded-lg text-zinc-500 transition-colors"
+            className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-white/5 text-zinc-500' : 'hover:bg-zinc-100 text-zinc-400'}`}
           >
             <ArrowLeft size={18} />
           </button>
@@ -262,8 +252,8 @@ export default function App() {
               whileHover={{ x: 5 }}
               className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-300 group ${
                 activeCategory === cat.id 
-                  ? 'bg-white/10 text-white shadow-inner' 
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                  ? (isDarkMode ? 'bg-white/10 text-white shadow-inner' : 'bg-brand-blue/10 text-brand-blue font-bold')
+                  : (isDarkMode ? 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100')
               }`}
             >
               <div className={`w-1.5 h-1.5 rounded-full transition-all duration-500 shrink-0 ${
@@ -277,16 +267,15 @@ export default function App() {
         </div>
 
         {/* Sidebar Footer / Contact */}
-        <div className="p-6 mt-auto border-t border-white/10">
-          <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-            <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-[0.2em] mb-2">Contact Support</p>
+        <div className={`p-6 mt-auto border-t ${isDarkMode ? 'border-white/10' : 'border-zinc-200'}`}>
+          <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-zinc-50 border-zinc-200 shadow-sm'}`}>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] mb-2">Support</p>
             <a 
               href="mailto:service@tokenplus.io" 
-              className="text-xs text-zinc-400 hover:text-brand-blue transition-colors block truncate font-medium"
+              className={`text-xs transition-colors block truncate font-medium ${isDarkMode ? 'text-zinc-400 hover:text-brand-blue' : 'text-zinc-600 hover:text-brand-blue'}`}
             >
               service@tokenplus.io
             </a>
-            <p className="text-[10px] text-zinc-600 mt-1">Available 24/7 for inquiries</p>
           </div>
         </div>
       </motion.nav>
@@ -302,7 +291,7 @@ export default function App() {
         <h1 className="sr-only">TokenPlus - 全球领先的 AI 资源、GPU 算力与 API 货源批发链接器</h1>
 
         {/* TokenPlus Header */}
-        <header className="h-16 border-b border-white/10 glass flex items-center justify-between px-6 md:px-12 z-40 shrink-0">
+        <header className={`h-16 border-b transition-colors duration-500 z-40 shrink-0 flex items-center justify-between px-6 md:px-12 backdrop-blur-xl ${isDarkMode ? 'border-white/10 bg-zinc-950/80 text-white' : 'border-zinc-200 bg-white/80 text-zinc-900'}`}>
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-4">
               {/* Sidebar Toggle Integrated into Header */}
@@ -311,7 +300,7 @@ export default function App() {
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   onClick={() => setIsSidebarCollapsed(false)}
-                  className="w-10 h-10 bg-brand-blue/20 rounded-xl flex items-center justify-center text-brand-blue hover:bg-brand-blue/30 transition-colors"
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDarkMode ? 'bg-brand-blue/20 text-brand-blue hover:bg-brand-blue/30' : 'bg-brand-blue/10 text-brand-blue hover:bg-brand-blue/20'}`}
                 >
                   <Menu size={20} />
                 </motion.button>
@@ -322,23 +311,14 @@ export default function App() {
               {[
                 { name: 'API 算力', url: 'https://tokenplus.io' },
                 { name: 'Token 交易', url: 'https://tokenplus.io' },
-                { name: '资源分销', url: 'https://tokenplus.io' },
-                { name: '商务中心', url: 'https://tokenplus.io' },
-                { name: '联系我们', url: '#footer', isScroll: true }
+                { name: '资源分销', url: 'https://tokenplus.io' }
               ].map((item) => (
                 <a 
                   key={item.name} 
                   href={item.url} 
-                  target={item.isScroll ? "_self" : "_blank"}
-                  rel={item.isScroll ? "" : "noopener noreferrer"}
-                  onClick={(e) => {
-                    if (item.isScroll) {
-                      e.preventDefault();
-                      const footer = document.querySelector('footer');
-                      footer?.scrollIntoView({ behavior: 'smooth' });
-                    }
-                  }}
-                  className="text-sm text-zinc-400 hover:text-brand-blue transition-colors font-medium"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`text-sm transition-colors font-medium ${isDarkMode ? 'text-zinc-400 hover:text-brand-blue' : 'text-zinc-500 hover:text-brand-blue'}`}
                 >
                   {item.name}
                 </a>
@@ -349,7 +329,7 @@ export default function App() {
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all mr-2"
+              className={`p-2.5 rounded-xl transition-all mr-2 ${isDarkMode ? 'bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10' : 'bg-zinc-100 border border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200'}`}
               title={isDarkMode ? "切换到白天模式" : "切换到夜晚模式"}
             >
               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
@@ -358,7 +338,7 @@ export default function App() {
               href="https://tokenplus.io" 
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-1.5 rounded-lg bg-brand-blue/10 text-brand-blue text-sm font-bold border border-brand-blue/20 hover:bg-brand-blue/20 transition-all"
+              className={`px-4 py-1.5 rounded-lg text-sm font-bold border transition-all ${isDarkMode ? 'bg-brand-blue/10 text-brand-blue border-brand-blue/20 hover:bg-brand-blue/20' : 'bg-white text-brand-blue border-brand-blue/20 hover:bg-brand-blue/5'}`}
             >
               登录
             </a>
@@ -398,8 +378,9 @@ export default function App() {
               <CategorySection 
                 key={category.id} 
                 category={category} 
+                isDarkMode={isDarkMode}
                 products={
-                  [...(category.products || [])].sort((a, b) => (a.sortOrder || 999) - (b.sortOrder || 999))
+                  [...(category.products || [])].sort((a, b) => (b.sortOrder || 0) - (a.sortOrder || 0))
                 }
                 hoveredProductId={hoveredProductId}
                 setHoveredProductId={setHoveredProductId}
@@ -407,67 +388,33 @@ export default function App() {
             ))}
 
             {/* TokenPlus Footer */}
-            <footer className="pt-20 pb-12 border-t border-white/10">
+            <footer className={`pt-20 pb-12 border-t transition-colors duration-500 ${isDarkMode ? 'border-white/10 text-zinc-400' : 'border-zinc-200 text-zinc-600'}`}>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
                 <div className="col-span-1 md:col-span-2">
                   <div className="flex items-center gap-2 mb-6">
                     <div className="w-8 h-8 bg-brand-blue rounded-lg flex items-center justify-center">
                       <Zap className="text-white" size={16} />
                     </div>
-                    <span className="font-display font-bold text-xl tracking-tight text-white">TokenPlus</span>
+                    <span className={`font-display font-bold text-xl tracking-tight transition-colors ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>TokenPlus</span>
                   </div>
-                  <p className="text-zinc-500 text-sm leading-relaxed max-w-md mb-8">
+                  <p className="text-sm leading-relaxed max-w-md mb-8">
                     TokenPlus 【AI Token服务&资源链接器】AI 算力/Token Token二级交易所 AI 行业的 B2B 贸易交易所 API TOKEN货源批发集市。
                   </p>
-                  <div className="flex items-center gap-4">
-                    <a href="https://t.me/TokenPlusIONews" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 hover:text-brand-blue hover:bg-brand-blue/10 transition-all">
-                      <MessageSquare size={20} />
-                    </a>
-                    <a href="https://tokenplus.io" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 hover:text-brand-blue hover:bg-brand-blue/10 transition-all">
-                      <Globe size={20} />
-                    </a>
-                  </div>
                 </div>
 
                 <div>
-                  <h5 className="text-white font-bold text-sm mb-6">资源链接</h5>
-                  <ul className="space-y-4">
-                    {[
-                      { name: 'Telegram频道', url: 'https://t.me/TokenPlusIONews' },
-                      { name: 'Telegram交流群', url: 'https://t.me/+VKkSi-OPQN5lZmU9' },
-                      { name: 'API 供应链', url: 'https://tokenplus.io' },
-                      { name: '货源担保群', url: 'https://tokenplus.io' }
-                    ].map(item => (
-                      <li key={item.name}>
-                        <a 
-                          href={item.url} 
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-zinc-500 hover:text-brand-blue text-sm transition-colors flex items-center gap-2 group"
-                        >
-                          {item.name}
-                          <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div>
-                  <h5 className="text-white font-bold text-sm mb-6">法律条款</h5>
+                  <h5 className={`font-bold text-sm mb-6 transition-colors ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>法律条款</h5>
                   <ul className="space-y-4">
                     {[
                       { name: '服务条款', url: 'https://tokenplus.io/p/2-TermsofService' },
-                      { name: '隐私条款', url: 'https://tokenplus.io/p/1-privacy' },
-                      { name: '退款政策', url: 'https://tokenplus.io' },
-                      { name: '免责声明', url: 'https://tokenplus.io' }
+                      { name: '隐私条款', url: 'https://tokenplus.io/p/1-privacy' }
                     ].map(item => (
                       <li key={item.name}>
                         <a 
                           href={item.url} 
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-zinc-500 hover:text-brand-blue text-sm transition-colors"
+                          className="text-sm hover:text-brand-blue transition-colors"
                         >
                           {item.name}
                         </a>
@@ -484,18 +431,10 @@ export default function App() {
                   </p>
                   <button 
                     onClick={() => setView('admin')}
-                    className="text-zinc-700 hover:text-zinc-500 transition-colors text-[10px] uppercase tracking-widest font-bold"
+                    className="text-zinc-700 hover:text-white transition-colors text-[10px] uppercase tracking-widest font-bold"
                   >
                     管理后台
                   </button>
-                </div>
-                <div className="flex items-center gap-6">
-                  <span className="flex items-center gap-1.5 text-zinc-600 text-xs">
-                    <ShieldCheck size={14} />
-                    安全加密交易
-                  </span>
-                  <span className="text-zinc-700">|</span>
-                  <span className="text-zinc-600 text-xs">24/7 全球支持</span>
                 </div>
               </div>
             </footer>
@@ -528,21 +467,22 @@ export default function App() {
 }
 
 interface CategorySectionProps {
-  key?: string | number;
   category: Category;
   products: Product[];
   hoveredProductId: string | null;
   setHoveredProductId: (id: string | null) => void;
+  isDarkMode: boolean;
 }
 
 function CategorySection({ 
   category, 
   products, 
   hoveredProductId,
-  setHoveredProductId
+  setHoveredProductId,
+  isDarkMode
 }: CategorySectionProps) {
   return (
-    <section id={`section-${category.id}`} className="relative" aria-labelledby={`title-${category.id}`}>
+    <section id={`section-${category.id}`} className="relative">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -552,7 +492,6 @@ function CategorySection({
       >
         <div>
           <motion.h2 
-            id={`title-${category.id}`}
             initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ amount: 0.3 }}
@@ -560,7 +499,7 @@ function CategorySection({
             className="text-3xl md:text-5xl font-display font-black tracking-tighter mb-3"
           >
             {category.name.split(' ').map((word, i) => (
-              <span key={i} className={i === 0 ? 'text-white' : 'text-white/30'}>{word} </span>
+              <span key={i} className={i === 0 ? (isDarkMode ? 'text-white' : 'text-zinc-900') : (isDarkMode ? 'text-white/30' : 'text-zinc-300')}>{word} </span>
             ))}
           </motion.h2>
           <motion.p 
@@ -568,16 +507,14 @@ function CategorySection({
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 1, delay: 0.4 }}
-            className="text-zinc-500 max-w-md text-base leading-relaxed"
+            className={`max-w-md text-base leading-relaxed ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400'}`}
           >
             {category.description}
           </motion.p>
         </div>
       </motion.div>
 
-      <div className={`
-        grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6
-      `}>
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6">
         {products.map((product, idx) => (
           <motion.div
             key={product.id}
@@ -595,11 +532,13 @@ function CategorySection({
             {category.displayMode === 'tile' ? (
               <TileCard 
                 product={product} 
+                isDarkMode={isDarkMode}
               />
             ) : (
               <ProductCard 
                 product={product} 
                 index={idx}
+                isDarkMode={isDarkMode}
                 isHovered={hoveredProductId === product.id}
                 isDimmed={hoveredProductId !== null && hoveredProductId !== product.id}
                 onHover={() => setHoveredProductId(product.id)}
@@ -613,53 +552,57 @@ function CategorySection({
   );
 }
 
-function TileCard({ product }: { product: Product }) {
+function TileCard({ product, isDarkMode }: { product: Product, isDarkMode: boolean }) {
   return (
     <motion.a
       href={product.url}
       target="_blank"
       rel="noopener noreferrer"
       layout
-      aria-label={`${product.name} - ${product.description}`}
       whileHover={{ 
         scale: 1.05, 
         y: -10,
-        boxShadow: "0 30px 60px -12px rgba(59, 130, 246, 0.4), 0 18px 36px -18px rgba(0, 0, 0, 0.5)"
+        boxShadow: isDarkMode ? "0 30px 60px -12px rgba(59, 130, 246, 0.4)" : "0 30px 60px -12px rgba(0, 0, 0, 0.1)"
       }}
       whileTap={{ scale: 0.98 }}
       initial={{ opacity: 0, scale: 0.9 }}
       whileInView={{ opacity: 1, scale: 1 }}
       viewport={{ once: true }}
-      className="group flex flex-col justify-center p-4 rounded-xl bg-zinc-800/50 backdrop-blur-xl border border-white/10 hover:border-brand-blue/50 transition-all duration-500 h-24 relative overflow-hidden"
+      className={`group flex flex-col justify-center p-4 rounded-xl backdrop-blur-xl border transition-all duration-500 h-24 relative overflow-hidden ${isDarkMode ? 'bg-zinc-800/50 border-white/10 hover:border-brand-blue/50' : 'bg-white border-zinc-200 hover:border-brand-blue shadow-sm'}`}
     >
       <article className="flex items-center gap-4 w-full h-full relative z-10">
         {product.isAdminUsed && (
-          <div className="absolute -top-1 -right-1 z-30 group/tooltip">
-            <div className="w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_12px_rgba(16,185,129,0.8)] animate-pulse border-2 border-zinc-900" />
-            <div className="absolute top-full right-0 mt-2 px-2 py-1 bg-zinc-900/95 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[100] border border-white/10 shadow-2xl backdrop-blur-md">
+          <div className="absolute -top-2 -right-2 z-30 group/tooltip">
+            {/* Refined breathing light */}
+            <div className="relative w-4 h-4 flex items-center justify-center">
+              <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20 scale-150" />
+              <div className="absolute inset-0 bg-emerald-400 rounded-full blur-[4px] animate-pulse" />
+              <div className="relative w-2.5 h-2.5 bg-emerald-500 rounded-full border border-white shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+            </div>
+            <div className="absolute top-full right-0 mt-3 px-2 py-1 bg-zinc-900/95 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[100] border border-white/10 shadow-2xl backdrop-blur-md font-bold">
               站长使用过
             </div>
           </div>
         )}
         {product.logo ? (
-          <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border border-white/10 group-hover:border-brand-blue/30 transition-colors">
+          <div className={`w-12 h-12 rounded-full overflow-hidden shrink-0 border transition-colors ${isDarkMode ? 'border-white/10 group-hover:border-brand-blue/30' : 'border-zinc-200 group-hover:border-brand-blue/30 shadow-sm'}`}>
             <img 
               src={product.logo} 
-              alt={`${product.name} 图标`} 
+              alt={product.name} 
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
               referrerPolicy="no-referrer"
             />
           </div>
         ) : (
-          <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/10 group-hover:bg-brand-blue/10 group-hover:border-brand-blue/20 transition-all duration-500">
-            <LayoutGrid size={20} className="text-zinc-600 group-hover:text-brand-blue transition-colors" />
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 border transition-all duration-500 ${isDarkMode ? 'bg-white/5 border-white/10 group-hover:bg-brand-blue/10' : 'bg-zinc-50 border-zinc-200 group-hover:bg-brand-blue/5'}`}>
+            <LayoutGrid size={20} className="text-zinc-500 group-hover:text-brand-blue transition-colors" />
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <h4 className="font-display font-bold text-sm text-white group-hover:text-brand-blue transition-colors truncate">
+          <h4 className={`font-display font-bold text-sm transition-colors truncate ${isDarkMode ? 'text-white' : 'text-zinc-900 group-hover:text-brand-blue'}`}>
             {product.name}
           </h4>
-          <p className="text-zinc-500 text-[11px] line-clamp-2 leading-snug mt-1 group-hover:text-zinc-400 transition-colors">
+          <p className={`text-[11px] line-clamp-2 leading-snug mt-1 transition-colors ${isDarkMode ? 'text-zinc-500 group-hover:text-zinc-400' : 'text-zinc-500 group-hover:text-zinc-700'}`}>
             {product.description}
           </p>
         </div>
@@ -678,6 +621,7 @@ interface ProductCardProps {
   isDimmed: boolean;
   onHover: () => void;
   onLeave: () => void;
+  isDarkMode: boolean;
 }
 
 function ProductCard({ 
@@ -686,7 +630,8 @@ function ProductCard({
   isHovered,
   isDimmed,
   onHover,
-  onLeave
+  onLeave,
+  isDarkMode
 }: ProductCardProps) {
   return (
     <motion.a
@@ -696,7 +641,6 @@ function ProductCard({
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
       layout
-      aria-label={`${product.name} - ${product.description}`}
       initial={{ opacity: 0, y: 30, scale: 0.95 }}
       whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true }}
@@ -715,18 +659,22 @@ function ProductCard({
       }}
       style={{ perspective: 1200, transformStyle: "preserve-3d" }}
       className={`
-        relative group block rounded-xl overflow-hidden bg-zinc-800/40 backdrop-blur-xl border border-white/10 transition-all duration-500
+        relative group block rounded-xl overflow-hidden backdrop-blur-xl border transition-all duration-500
+        ${isDarkMode ? 'bg-zinc-800/40 border-white/10' : 'bg-white border-zinc-200 shadow-sm'}
         ${isDimmed ? 'opacity-40 grayscale scale-[0.98]' : 'opacity-100 grayscale-0 scale-100'}
-        ${isHovered ? 'border-brand-blue/60 shadow-[0_30px_70px_-15px_rgba(59,130,246,0.5)] z-50' : 'z-10'}
+        ${isHovered ? 'border-brand-blue/60 shadow-2xl z-50' : 'z-10 shadow-lg shadow-black/5'}
       `}
     >
       <article>
         {product.isAdminUsed && (
           <div className="absolute top-3 right-3 z-30 group/tooltip">
-            <div className="w-4 h-4 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,1)] animate-pulse border-2 border-zinc-900 flex items-center justify-center">
-              <div className="w-1.5 h-1.5 bg-white rounded-full opacity-50" />
+            {/* Refined breathing light */}
+            <div className="relative w-5 h-5 flex items-center justify-center">
+              <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-25 scale-125" />
+              <div className="absolute inset-0 bg-emerald-400 rounded-full blur-[6px] animate-pulse" />
+              <div className="relative w-3 h-3 bg-emerald-500 rounded-full border-2 border-white shadow-[0_0_12px_rgba(16,185,129,1)]" />
             </div>
-            <div className="absolute top-full right-0 mt-2 px-2 py-1 bg-zinc-900/95 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[100] border border-white/10 shadow-2xl backdrop-blur-md">
+            <div className="absolute top-full right-0 mt-3 px-2 py-1 bg-zinc-900/95 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[100] border border-white/10 shadow-2xl backdrop-blur-md font-bold">
               站长使用过
             </div>
           </div>
@@ -743,34 +691,34 @@ function ProductCard({
           )}
         </AnimatePresence>
 
-        {/* The "Blue Box" part from the image */}
+        {/* Product Image Area */}
         <div className="relative">
           <div className="aspect-[16/8] overflow-hidden relative">
             <motion.img 
               src={product.image} 
-              alt={`${product.name} 详情图`}
+              alt={product.name}
               referrerPolicy="no-referrer"
               animate={{ scale: isHovered ? 1.15 : 1 }}
               transition={{ duration: 0.8, ease: "easeOut" }}
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-linear-to-t from-zinc-950 via-transparent to-transparent opacity-40" />
+            <div className={`absolute inset-0 bg-linear-to-t via-transparent to-transparent opacity-40 ${isDarkMode ? 'from-zinc-950' : 'from-zinc-200'}`} />
             
-            {/* Scanline effect for cool tech feel */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_2px,3px_100%] pointer-events-none opacity-20" />
+            {/* Tech Scanline Effect */}
+            <div className={`absolute inset-0 pointer-events-none opacity-20 ${isDarkMode ? 'bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_2px,3px_100%]' : ''}`} />
           </div>
 
-          <div className="py-2 px-4 bg-zinc-700/60 backdrop-blur-md border-t border-white/10 relative z-10">
+          <div className={`py-2 px-4 border-t relative z-10 transition-colors ${isDarkMode ? 'bg-zinc-800/80 border-white/10' : 'bg-white/90 border-zinc-100 shadow-inner'}`}>
             <div className="flex justify-between items-center">
-              <h4 className="font-display font-bold text-sm text-white group-hover:text-brand-blue transition-colors truncate pr-2">
+              <h4 className={`font-display font-bold text-sm transition-colors truncate pr-2 ${isDarkMode ? 'text-white' : 'text-zinc-900 group-hover:text-brand-blue'}`}>
                 {product.name}
               </h4>
-              <span className="font-mono text-[10px] font-bold text-zinc-500 shrink-0 group-hover:text-brand-blue/70 transition-colors">{product.price}</span>
+              <span className={`font-mono text-[10px] font-bold shrink-0 transition-colors ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400 group-hover:text-brand-blue/70'}`}>{product.price}</span>
             </div>
           </div>
         </div>
         
-        {/* The Reveal part - Animates height so it doesn't reserve space by default */}
+        {/* Reveal Description */}
         <AnimatePresence>
           {isHovered && (
             <motion.div
@@ -781,14 +729,14 @@ function ProductCard({
                 height: { type: "spring", stiffness: 200, damping: 25 },
                 opacity: { duration: 0.3 }
               }}
-              className="overflow-hidden bg-zinc-800/60"
+              className={`overflow-hidden transition-colors ${isDarkMode ? 'bg-zinc-800/60' : 'bg-zinc-50/80'}`}
             >
               <div className="px-4 pb-4 pt-1">
                 <motion.p 
                   initial={{ y: 10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.1 }}
-                  className="text-zinc-500 text-[11px] leading-relaxed line-clamp-2 group-hover:text-zinc-400 transition-colors"
+                  className={`text-[11px] leading-relaxed line-clamp-2 transition-colors ${isDarkMode ? 'text-zinc-500 group-hover:text-zinc-400' : 'text-zinc-500 group-hover:text-zinc-700'}`}
                 >
                   {product.description}
                 </motion.p>
@@ -797,11 +745,6 @@ function ProductCard({
           )}
         </AnimatePresence>
       </article>
-
-      {/* SEO Hidden Content */}
-      <div className="sr-only">
-        {product.details.join(', ')}
-      </div>
     </motion.a>
   );
 }
