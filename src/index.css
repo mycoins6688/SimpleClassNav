@@ -21,6 +21,9 @@
   body {
     @apply bg-zinc-950 text-zinc-100 antialiased selection:bg-brand-blue selection:text-white transition-colors duration-500;
     font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Support for light mode */

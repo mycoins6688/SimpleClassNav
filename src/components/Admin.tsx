@@ -43,7 +43,7 @@ export default function Admin({ onBack }: { onBack: () => void }) {
       const querySnapshot = await getDocs(q);
       const fetched: Category[] = [];
       querySnapshot.forEach((doc) => {
-        fetched.push({ ...doc.data() } as Category);
+        fetched.push({ id: doc.id, ...doc.data() } as Category);
       });
       // Sort categories DESC (Larger = First)
       fetched.sort((a, b) => {
@@ -239,6 +239,7 @@ export default function Admin({ onBack }: { onBack: () => void }) {
       sortOrder: nextOrder,
       isAdminUsed: false
     };
+    const newProducts = [...(cat.products || [])];
     newProducts.push(newProd);
     
     saveOneCategory({ ...cat, products: newProducts });
@@ -271,10 +272,12 @@ export default function Admin({ onBack }: { onBack: () => void }) {
 
   const handleSaveCategory = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    if (!tempData) return;
+    const dataToSave = { ...tempData };
     setConfirmingAction({
       message: '确认保存对该分类的修改？',
       onConfirm: () => {
-        saveOneCategory(tempData);
+        saveOneCategory(dataToSave);
         setEditingCategory(null);
       }
     });
@@ -282,12 +285,15 @@ export default function Admin({ onBack }: { onBack: () => void }) {
 
   const handleSaveProduct = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    if (!tempData || !editingItem) return;
+    const prodToSave = { ...tempData };
+    const editingContext = { ...editingItem };
     setConfirmingAction({
       message: '确认保存对该产品的详细修改？',
       onConfirm: () => {
-        const cat = data.find(c => c.id === editingItem?.catId);
-        if (!cat || !editingItem) return;
-        const newProds = (cat.products || []).map(p => p.id === editingItem.prodId ? { ...tempData, category: cat.id } : p);
+        const cat = data.find(c => c.id === editingContext.catId);
+        if (!cat) return;
+        const newProds = (cat.products || []).map(p => p.id === editingContext.prodId ? { ...prodToSave, category: cat.id } : p);
         saveOneCategory({ ...cat, products: newProds });
         setEditingItem(null);
       }
@@ -532,7 +538,7 @@ export default function Admin({ onBack }: { onBack: () => void }) {
                     </div>
                     <div>
                       <label className="block text-[10px] text-zinc-500 mb-1">排序 ID (越大越靠前)</label>
-                      <input type="number" value={tempData.sortOrder || 0} onChange={e => setTempData({...tempData, sortOrder: parseInt(e.target.value) || 0})} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-sm outline-none focus:border-brand-blue/50" />
+                      <input type="number" value={tempData.sortOrder || 0} onChange={e => setTempData({...tempData, sortOrder: Number(e.target.value) || 0})} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-sm outline-none focus:border-brand-blue/50" />
                     </div>
                     <div>
                       <label className="block text-[10px] text-zinc-500 mb-1">显示模式</label>
@@ -582,7 +588,7 @@ export default function Admin({ onBack }: { onBack: () => void }) {
 
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {(cat.products || []).sort((a,b) => (b.sortOrder || 0) - (a.sortOrder || 0)).map((prod, index) => (
+                  {[...(cat.products || [])].sort((a,b) => (b.sortOrder || 0) - (a.sortOrder || 0)).map((prod, index) => (
                     <div key={prod.id} className="p-4 rounded-2xl bg-white/5 border border-white/10 group hover:border-brand-blue/30 transition-all">
                       {editingItem?.prodId === prod.id ? (
                         <div className="space-y-3">
@@ -593,7 +599,7 @@ export default function Admin({ onBack }: { onBack: () => void }) {
                             </div>
                             <div>
                               <label className="block text-[10px] text-zinc-500 mb-1">排序 ID (大数在前)</label>
-                              <input type="number" value={tempData.sortOrder || 0} onChange={e => setTempData({...tempData, sortOrder: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs" />
+                              <input type="number" value={tempData.sortOrder || 0} onChange={e => setTempData({...tempData, sortOrder: Number(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs" />
                             </div>
                           </div>
                           <div>

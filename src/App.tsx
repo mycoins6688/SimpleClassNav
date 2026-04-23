@@ -26,24 +26,23 @@ import {
   Moon,
   CheckCircle2
 } from 'lucide-react';
-import { categories as initialCategories } from './data';
 import { Product, Category, LayoutType, DisplayMode } from './types';
 import Admin from './components/Admin';
 import { db } from './lib/firebase';
 import { collection, query, getDocs, doc, getDoc } from 'firebase/firestore';
 
 export default function App() {
-  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [siteSettings, setSiteSettings] = useState({ 
-    siteTitle: 'OmniGallery - Product Explorer', 
-    siteKeywords: 'AI, Compute, Token', 
-    siteDescription: 'A high-end product explorer.' 
+    siteTitle: 'OmniGallery - Loading...', 
+    siteKeywords: '', 
+    siteDescription: '' 
   });
   const [loading, setLoading] = useState(true);
 
   const allProducts = categories.flatMap(c => (c.products || []) as Product[]);
   const [view, setView] = useState<'gallery' | 'admin'>('gallery'); 
-  const [activeCategory, setActiveCategory] = useState<string>(initialCategories[0].id);
+  const [activeCategory, setActiveCategory] = useState<string>('');
   const [isDarkMode, setIsDarkMode] = useState(true);
 
   // Initialize theme
@@ -64,7 +63,7 @@ export default function App() {
         const querySnapshot = await getDocs(q);
         const fetchedCats: Category[] = [];
         querySnapshot.forEach((doc) => {
-          fetchedCats.push({ ...doc.data() } as Category);
+          fetchedCats.push({ id: doc.id, ...doc.data() } as Category);
         });
         
         if (fetchedCats.length > 0) {
@@ -122,19 +121,69 @@ export default function App() {
     keywordsMeta.setAttribute('content', siteSettings.siteKeywords);
   }, [siteSettings]);
 
+  if (loading) {
+    return (
+      <div className={`h-screen w-full flex flex-col items-center justify-center transition-colors duration-500 ${isDarkMode ? 'bg-zinc-950 text-white' : 'bg-zinc-50 text-zinc-900'}`}>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center gap-6"
+        >
+          <div className="w-16 h-16 bg-brand-blue rounded-2xl flex items-center justify-center relative shadow-2xl shadow-brand-blue/20">
+            <Zap className="text-white animate-pulse" size={32} />
+            <div className="absolute inset-0 bg-brand-blue rounded-2xl animate-ping opacity-20" />
+          </div>
+          <p className="text-sm font-bold tracking-[0.2em] uppercase opacity-50">TokenPlus Loading</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (view === 'admin') {
+    return <Admin onBack={() => {
+      setView('gallery');
+      window.location.reload(); 
+    }} />;
+  }
+
+  return (
+    <GalleryUI 
+      categories={categories}
+      siteSettings={siteSettings}
+      isDarkMode={isDarkMode}
+      setIsDarkMode={setIsDarkMode}
+      setView={setView}
+      activeCategory={activeCategory}
+      setActiveCategory={setActiveCategory}
+    />
+  );
+}
+
+interface GalleryUIProps {
+  categories: Category[];
+  siteSettings: any;
+  isDarkMode: boolean;
+  setIsDarkMode: (v: boolean) => void;
+  setView: (v: 'gallery' | 'admin') => void;
+  activeCategory: string;
+  setActiveCategory: (v: string) => void;
+}
+
+function GalleryUI({ categories, siteSettings, isDarkMode, setIsDarkMode, setView, activeCategory, setActiveCategory }: GalleryUIProps) {
   const [hoveredProductId, setHoveredProductId] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
-
-  // ... 之前的逻辑保持一致，但需要处理 Admin 视图
-  
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ container: scrollContainerRef });
+  const scrollContainerRefValue = scrollContainerRef; // Stable ref for hooks
+  
+  const { scrollYProgress } = useScroll({ container: scrollContainerRefValue });
   const scaleX = useSpring(scrollYProgress, {
     stiffness: 100,
     damping: 30,
     restDelta: 0.001
   });
+
+  const allProducts = categories.flatMap(c => (c.products || []) as Product[]);
 
   // Scroll Spy and Back to Top logic
   useEffect(() => {
@@ -198,13 +247,6 @@ export default function App() {
       scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
-
-  if (view === 'admin') {
-    return <Admin onBack={() => {
-      setView('gallery');
-      window.location.reload(); 
-    }} />;
-  }
 
   return (
     <div className={`flex h-screen w-full overflow-hidden font-sans relative selection:bg-brand-blue/30 selection:text-white transition-colors duration-500 ${isDarkMode ? 'bg-zinc-950 text-white' : 'bg-zinc-50 text-zinc-900'}`}>
@@ -306,50 +348,64 @@ export default function App() {
                 </motion.button>
               )}
             </div>
-            
-            <nav className="hidden lg:flex items-center gap-6">
-              {[
-                { name: 'API 算力', url: 'https://tokenplus.io' },
-                { name: 'Token 交易', url: 'https://tokenplus.io' },
-                { name: '资源分销', url: 'https://tokenplus.io' }
-              ].map((item) => (
-                <a 
-                  key={item.name} 
-                  href={item.url} 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`text-sm transition-colors font-medium ${isDarkMode ? 'text-zinc-400 hover:text-brand-blue' : 'text-zinc-500 hover:text-brand-blue'}`}
-                >
-                  {item.name}
-                </a>
-              ))}
-            </nav>
           </div>
 
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-2.5 rounded-xl transition-all mr-2 ${isDarkMode ? 'bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10' : 'bg-zinc-100 border border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200'}`}
-              title={isDarkMode ? "切换到白天模式" : "切换到夜晚模式"}
-            >
-              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
-            <a 
-              href="https://tokenplus.io" 
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold border transition-all ${isDarkMode ? 'bg-brand-blue/10 text-brand-blue border-brand-blue/20 hover:bg-brand-blue/20' : 'bg-white text-brand-blue border-brand-blue/20 hover:bg-brand-blue/5'}`}
-            >
-              登录
-            </a>
-            <a 
-              href="https://tokenplus.io" 
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-1.5 rounded-lg bg-brand-blue text-white text-sm font-bold shadow-lg shadow-brand-blue/20 hover:scale-105 transition-all active:scale-95"
-            >
-              注册
-            </a>
+          <div className="flex items-center gap-6">
+            {/* New External Links - Moved to right side area */}
+            <nav className="hidden lg:flex items-center gap-6 mr-4">
+              <a 
+                href="https://tokenplus.io" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className={`text-sm font-bold transition-all hover:scale-105 active:scale-95 ${isDarkMode ? 'text-zinc-400 hover:text-brand-blue' : 'text-zinc-500 hover:text-brand-blue'}`}
+              >
+                Tokenplus.io - AI 资源&服务链接器
+              </a>
+              <div className="flex items-center gap-4 border-l pl-6 border-white/10 h-4">
+                <a 
+                  href="https://t.me/+VKkSi-OPQN5lZmU9" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={`text-sm font-medium transition-colors ${isDarkMode ? 'text-zinc-50 hover:text-brand-blue' : 'text-zinc-600 hover:text-brand-blue'}`}
+                >
+                  Telegram交流群
+                </a>
+                <a 
+                  href="https://t.me/+VKkSi-OPQN5lZmU9" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={`text-sm font-medium transition-colors ${isDarkMode ? 'text-zinc-50 hover:text-brand-blue' : 'text-zinc-600 hover:text-brand-blue'}`}
+                >
+                  Telegram频道
+                </a>
+              </div>
+            </nav>
+
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className={`p-2.5 rounded-xl transition-all mr-2 ${isDarkMode ? 'bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10' : 'bg-zinc-100 border border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200'}`}
+                title={isDarkMode ? "切换到白天模式" : "切换到夜晚模式"}
+              >
+                {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+              <a 
+                href="https://tokenplus.io" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`px-4 py-1.5 rounded-lg text-sm font-bold border transition-all ${isDarkMode ? 'bg-brand-blue/10 text-brand-blue border-brand-blue/20 hover:bg-brand-blue/20' : 'bg-white text-brand-blue border-brand-blue/20 hover:bg-brand-blue/5'}`}
+              >
+                登录
+              </a>
+              <a 
+                href="https://tokenplus.io" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-1.5 rounded-lg bg-brand-blue text-white text-sm font-bold shadow-lg shadow-brand-blue/20 hover:scale-105 transition-all active:scale-95"
+              >
+                注册
+              </a>
+            </div>
           </div>
         </header>
 
@@ -507,14 +563,17 @@ function CategorySection({
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 1, delay: 0.4 }}
-            className={`max-w-md text-base leading-relaxed ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400'}`}
+            className={`text-lg leading-relaxed whitespace-nowrap truncate ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400'}`}
           >
             {category.description}
           </motion.p>
         </div>
       </motion.div>
 
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6">
+      <div className={`grid gap-6 ${category.displayMode === 'tile' 
+        ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+        : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6'
+      }`}>
         {products.map((product, idx) => (
           <motion.div
             key={product.id}
@@ -568,11 +627,11 @@ function TileCard({ product, isDarkMode }: { product: Product, isDarkMode: boole
       initial={{ opacity: 0, scale: 0.9 }}
       whileInView={{ opacity: 1, scale: 1 }}
       viewport={{ once: true }}
-      className={`group flex flex-col justify-center p-4 rounded-xl backdrop-blur-xl border transition-all duration-500 h-24 relative overflow-hidden ${isDarkMode ? 'bg-zinc-800/50 border-white/10 hover:border-brand-blue/50' : 'bg-white border-zinc-200 hover:border-brand-blue shadow-sm'}`}
+      className={`group flex flex-col justify-center py-3 px-5 rounded-2xl backdrop-blur-xl border transition-all duration-500 min-h-[100px] relative overflow-hidden ${isDarkMode ? 'bg-zinc-800/50 border-white/10 hover:border-brand-blue/50' : 'bg-white border-zinc-200 hover:border-brand-blue shadow-sm'}`}
     >
-      <article className="flex items-center gap-4 w-full h-full relative z-10">
+      <article className="flex items-center gap-5 w-full h-full relative z-10">
         {product.isAdminUsed && (
-          <div className="absolute -top-2 -right-2 z-30 group/tooltip">
+          <div className="absolute -top-3 -right-3 z-30 group/tooltip">
             {/* Refined breathing light */}
             <div className="relative w-4 h-4 flex items-center justify-center">
               <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20 scale-150" />
@@ -585,7 +644,7 @@ function TileCard({ product, isDarkMode }: { product: Product, isDarkMode: boole
           </div>
         )}
         {product.logo ? (
-          <div className={`w-12 h-12 rounded-full overflow-hidden shrink-0 border transition-colors ${isDarkMode ? 'border-white/10 group-hover:border-brand-blue/30' : 'border-zinc-200 group-hover:border-brand-blue/30 shadow-sm'}`}>
+          <div className={`w-14 h-14 rounded-full overflow-hidden shrink-0 border transition-colors ${isDarkMode ? 'border-white/10 group-hover:border-brand-blue/30' : 'border-zinc-200 group-hover:border-brand-blue/30 shadow-sm'}`}>
             <img 
               src={product.logo} 
               alt={product.name} 
@@ -594,15 +653,15 @@ function TileCard({ product, isDarkMode }: { product: Product, isDarkMode: boole
             />
           </div>
         ) : (
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 border transition-all duration-500 ${isDarkMode ? 'bg-white/5 border-white/10 group-hover:bg-brand-blue/10' : 'bg-zinc-50 border-zinc-200 group-hover:bg-brand-blue/5'}`}>
-            <LayoutGrid size={20} className="text-zinc-500 group-hover:text-brand-blue transition-colors" />
+          <div className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 border transition-all duration-500 ${isDarkMode ? 'bg-white/5 border-white/10 group-hover:bg-brand-blue/10' : 'bg-zinc-50 border-zinc-200 group-hover:bg-brand-blue/5'}`}>
+            <LayoutGrid size={24} className="text-zinc-500 group-hover:text-brand-blue transition-colors" />
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <h4 className={`font-display font-bold text-sm transition-colors truncate ${isDarkMode ? 'text-white' : 'text-zinc-900 group-hover:text-brand-blue'}`}>
+          <h4 className={`font-display font-medium text-xl tracking-tight transition-colors truncate ${isDarkMode ? 'text-white' : 'text-zinc-900 group-hover:text-brand-blue'}`}>
             {product.name}
           </h4>
-          <p className={`text-[11px] line-clamp-2 leading-snug mt-1 transition-colors ${isDarkMode ? 'text-zinc-500 group-hover:text-zinc-400' : 'text-zinc-500 group-hover:text-zinc-700'}`}>
+          <p className={`text-base line-clamp-2 leading-relaxed mt-2 transition-colors ${isDarkMode ? 'text-zinc-500 group-hover:text-zinc-400' : 'text-zinc-500 group-hover:text-zinc-700'}`}>
             {product.description}
           </p>
         </div>
@@ -693,7 +752,7 @@ function ProductCard({
 
         {/* Product Image Area */}
         <div className="relative">
-          <div className="aspect-[16/8] overflow-hidden relative">
+          <div className="h-32 overflow-hidden relative">
             <motion.img 
               src={product.image} 
               alt={product.name}
@@ -708,12 +767,12 @@ function ProductCard({
             <div className={`absolute inset-0 pointer-events-none opacity-20 ${isDarkMode ? 'bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] bg-[length:100%_2px,3px_100%]' : ''}`} />
           </div>
 
-          <div className={`py-2 px-4 border-t relative z-10 transition-colors ${isDarkMode ? 'bg-zinc-800/80 border-white/10' : 'bg-white/90 border-zinc-100 shadow-inner'}`}>
+          <div className={`py-2.5 px-5 border-t relative z-10 transition-colors ${isDarkMode ? 'bg-zinc-800/80 border-white/10' : 'bg-white/90 border-zinc-100 shadow-inner'}`}>
             <div className="flex justify-between items-center">
-              <h4 className={`font-display font-bold text-sm transition-colors truncate pr-2 ${isDarkMode ? 'text-white' : 'text-zinc-900 group-hover:text-brand-blue'}`}>
+              <h4 className={`font-display font-medium text-xl tracking-tight transition-colors truncate pr-2 ${isDarkMode ? 'text-white' : 'text-zinc-900 group-hover:text-brand-blue'}`}>
                 {product.name}
               </h4>
-              <span className={`font-mono text-[10px] font-bold shrink-0 transition-colors ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400 group-hover:text-brand-blue/70'}`}>{product.price}</span>
+              <span className={`font-mono text-sm font-medium shrink-0 transition-colors ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400 group-hover:text-brand-blue/70'}`}>{product.price}</span>
             </div>
           </div>
         </div>
@@ -731,12 +790,12 @@ function ProductCard({
               }}
               className={`overflow-hidden transition-colors ${isDarkMode ? 'bg-zinc-800/60' : 'bg-zinc-50/80'}`}
             >
-              <div className="px-4 pb-4 pt-1">
+              <div className="px-5 pb-6 pt-2">
                 <motion.p 
                   initial={{ y: 10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.1 }}
-                  className={`text-[11px] leading-relaxed line-clamp-2 transition-colors ${isDarkMode ? 'text-zinc-500 group-hover:text-zinc-400' : 'text-zinc-500 group-hover:text-zinc-700'}`}
+                  className={`text-base leading-relaxed line-clamp-3 transition-colors ${isDarkMode ? 'text-zinc-500 group-hover:text-zinc-400' : 'text-zinc-500 group-hover:text-zinc-700'}`}
                 >
                   {product.description}
                 </motion.p>
