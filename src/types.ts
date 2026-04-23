@@ -12,6 +12,7 @@ export interface Product {
   logo?: string;
   details: string[];
   sortOrder?: number; // 添加排序优先级，数字越小越靠前
+  isAdminUsed?: boolean; // 站长是否使用过
 }
 
 export interface Category {
@@ -22,5 +23,6 @@ export interface Category {
   displayMode: DisplayMode;
   background: string; // Tailwind class or CSS gradient
   accentColor: string;
+  sortOrder?: number; // 添加排序优先级
   products?: Product[]; // 嵌套的产品列表
 }

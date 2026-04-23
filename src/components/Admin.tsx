@@ -45,7 +45,12 @@ export default function Admin({ onBack }: { onBack: () => void }) {
       querySnapshot.forEach((doc) => {
         fetched.push({ ...doc.data() } as Category);
       });
-      fetched.sort((a, b) => a.id.localeCompare(b.id));
+      fetched.sort((a, b) => {
+        const orderA = a.sortOrder ?? 999;
+        const orderB = b.sortOrder ?? 999;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.id.localeCompare(b.id);
+      });
       setData(fetched);
 
       const settingsSnap = await getDoc(doc(db, 'settings', 'global'));
@@ -183,6 +188,7 @@ export default function Admin({ onBack }: { onBack: () => void }) {
       displayMode: mode,
       background: 'bg-zinc-900',
       accentColor: '#3b82f6',
+      sortOrder: (data.length || 0) + 1,
       products: []
     };
     setSaving(true);
@@ -202,22 +208,34 @@ export default function Admin({ onBack }: { onBack: () => void }) {
     });
   };
 
+  const RANDOM_IMGS = [
+    'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=1200&auto=format', // 科技/加密
+    'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200&auto=format', // 深空
+    'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1200&auto=format', // 金融/数据
+    'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1200&auto=format', // 抽象科技
+    'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1200&auto=format', // 金融/分析
+    'https://images.unsplash.com/photo-1534972195531-d756b9bfa9f2?q=80&w=1200&auto=format', // 科技编码
+    'https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?q=80&w=1200&auto=format', // 地球太空
+  ];
+
   const addProduct = (catId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     const cat = data.find(c => c.id === catId);
     if (!cat) return;
 
+    const randomIndex = Math.floor(Math.random() * RANDOM_IMGS.length);
     const newProducts = [...(cat.products || [])];
-    const newProd = {
+    const newProd: Product = {
       id: `prod-${Date.now()}`,
       name: '新产品',
       description: '产品描述',
       price: '价格',
-      image: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=800&auto=format',
+      image: RANDOM_IMGS[randomIndex],
       category: catId,
       url: 'https://tokenplus.io',
       details: ['详情1'],
-      sortOrder: (cat.products?.length || 0) + 1
+      sortOrder: (cat.products?.length || 0) + 1,
+      isAdminUsed: false
     };
     newProducts.push(newProd);
     
@@ -505,9 +523,13 @@ export default function Admin({ onBack }: { onBack: () => void }) {
             <div key={cat.id} className="rounded-3xl border border-white/10 bg-zinc-900/30 overflow-hidden shadow-sm">
               <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
                 {editingCategory === cat.id ? (
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 mr-4">
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 mr-4">
                     <input autoFocus value={tempData.name} onChange={e => setTempData({...tempData, name: e.target.value})} className="bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-sm outline-none focus:border-brand-blue/50" placeholder="分类名称" />
                     <input value={tempData.description} onChange={e => setTempData({...tempData, description: e.target.value})} className="bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-sm outline-none focus:border-brand-blue/50" placeholder="分类描述" />
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-zinc-500 whitespace-nowrap">排序:</span>
+                      <input type="number" value={tempData.sortOrder || 0} onChange={e => setTempData({...tempData, sortOrder: parseInt(e.target.value) || 0})} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-sm outline-none focus:border-brand-blue/50" />
+                    </div>
                     <select value={tempData.displayMode} onChange={e => setTempData({...tempData, displayMode: e.target.value})} className="bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-sm text-zinc-400">
                       <option value="card">Card (大图)</option>
                       <option value="tile">Tile (小图列表)</option>
@@ -516,6 +538,7 @@ export default function Admin({ onBack }: { onBack: () => void }) {
                 ) : (
                   <div>
                     <h3 className="text-xl font-bold flex items-center gap-3">
+                      <span className="text-zinc-600 font-mono text-sm">#{cat.sortOrder || 0}</span>
                       {cat.name}
                       <span className="text-[10px] uppercase tracking-widest text-brand-blue bg-brand-blue/10 px-2 py-0.5 rounded-full">{cat.displayMode}</span>
                     </h3>
@@ -559,8 +582,32 @@ export default function Admin({ onBack }: { onBack: () => void }) {
                             <input type="number" value={tempData.sortOrder} onChange={e => setTempData({...tempData, sortOrder: parseInt(e.target.value) || 0})} className="bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs" placeholder="排序ID" />
                           </div>
                           <input value={tempData.url} onChange={e => setTempData({...tempData, url: e.target.value})} className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs" placeholder="链接" />
-                          <input value={tempData.image} onChange={e => setTempData({...tempData, image: e.target.value})} className="w-full bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs" placeholder="图片URL" />
+                          <div className="flex gap-2">
+                            <input value={tempData.image} onChange={e => setTempData({...tempData, image: e.target.value})} className="flex-1 bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-xs" placeholder="图片URL" />
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                const randomIndex = Math.floor(Math.random() * RANDOM_IMGS.length);
+                                setTempData({...tempData, image: RANDOM_IMGS[randomIndex]});
+                              }}
+                              className="px-2 bg-white/5 border border-white/10 rounded-lg text-[10px] hover:bg-white/10"
+                              title="随机背景"
+                            >
+                              随机
+                            </button>
+                          </div>
                           
+                          <div className="flex items-center gap-2 px-2">
+                            <input 
+                              type="checkbox" 
+                              id={`verified-${prod.id}`}
+                              checked={tempData.isAdminUsed}
+                              onChange={e => setTempData({...tempData, isAdminUsed: e.target.checked})}
+                              className="w-4 h-4 rounded border-white/10 bg-black/30 text-brand-blue"
+                            />
+                            <label htmlFor={`verified-${prod.id}`} className="text-[10px] text-zinc-400 cursor-pointer">站长使用过</label>
+                          </div>
+
                           <div className="flex gap-2 pt-2">
                             <button type="button" onClick={(e) => handleSaveProduct(e)} className="flex-1 py-1.5 bg-brand-blue text-white text-xs font-bold rounded-lg">保存</button>
                             <button type="button" onClick={() => setEditingItem(null)} className="flex-1 py-1.5 bg-white/10 text-zinc-400 text-xs rounded-lg">取消</button>
@@ -572,7 +619,10 @@ export default function Admin({ onBack }: { onBack: () => void }) {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
                               <h4 className="font-bold text-sm truncate">{prod.name}</h4>
-                              <span className="text-[10px] text-zinc-600 font-mono">#{prod.sortOrder}</span>
+                              <div className="flex items-center gap-1">
+                                {prod.isAdminUsed && <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]" title="站长使用过" />}
+                                <span className="text-[10px] text-zinc-600 font-mono">#{prod.sortOrder}</span>
+                              </div>
                             </div>
                             <p className="text-zinc-500 text-[10px] line-clamp-2 mt-1">{prod.description}</p>
                             <div className="flex items-center gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">

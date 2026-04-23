@@ -21,7 +21,10 @@ import {
   Globe,
   MessageSquare,
   ShieldCheck,
-  ExternalLink
+  ExternalLink,
+  Sun,
+  Moon,
+  CheckCircle2
 } from 'lucide-react';
 import { categories as initialCategories } from './data';
 import { Product, Category, LayoutType, DisplayMode } from './types';
@@ -41,6 +44,16 @@ export default function App() {
   const allProducts = categories.flatMap(c => (c.products || []) as Product[]);
   const [view, setView] = useState<'gallery' | 'admin'>('gallery'); 
   const [activeCategory, setActiveCategory] = useState<string>(initialCategories[0].id);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  // Initialize theme
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   // Fetch data and settings from Firestore
   useEffect(() => {
@@ -55,7 +68,13 @@ export default function App() {
         });
         
         if (fetchedCats.length > 0) {
-          fetchedCats.sort((a, b) => a.id.localeCompare(b.id));
+          // Sort by sortOrder first, then fallback to id
+          fetchedCats.sort((a, b) => {
+            const orderA = a.sortOrder ?? 999;
+            const orderB = b.sortOrder ?? 999;
+            if (orderA !== orderB) return orderA - orderB;
+            return a.id.localeCompare(b.id);
+          });
           setCategories(fetchedCats);
           setActiveCategory(fetchedCats[0].id);
         }
@@ -328,6 +347,13 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all mr-2"
+              title={isDarkMode ? "切换到白天模式" : "切换到夜晚模式"}
+            >
+              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
             <a 
               href="https://tokenplus.io" 
               target="_blank"
@@ -607,6 +633,14 @@ function TileCard({ product }: { product: Product }) {
       className="group flex flex-col justify-center p-4 rounded-xl bg-zinc-800/50 backdrop-blur-xl border border-white/10 hover:border-brand-blue/50 transition-all duration-500 h-24 relative overflow-hidden"
     >
       <article className="flex items-center gap-4 w-full h-full relative z-10">
+        {product.isAdminUsed && (
+          <div className="absolute -top-1 -right-1 z-30 group/tooltip">
+            <div className="w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_12px_rgba(16,185,129,0.8)] animate-pulse border-2 border-zinc-900" />
+            <div className="absolute top-full right-0 mt-2 px-2 py-1 bg-zinc-900/95 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[100] border border-white/10 shadow-2xl backdrop-blur-md">
+              站长使用过
+            </div>
+          </div>
+        )}
         {product.logo ? (
           <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border border-white/10 group-hover:border-brand-blue/30 transition-colors">
             <img 
@@ -687,6 +721,16 @@ function ProductCard({
       `}
     >
       <article>
+        {product.isAdminUsed && (
+          <div className="absolute top-3 right-3 z-30 group/tooltip">
+            <div className="w-4 h-4 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,1)] animate-pulse border-2 border-zinc-900 flex items-center justify-center">
+              <div className="w-1.5 h-1.5 bg-white rounded-full opacity-50" />
+            </div>
+            <div className="absolute top-full right-0 mt-2 px-2 py-1 bg-zinc-900/95 text-white text-[10px] rounded opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[100] border border-white/10 shadow-2xl backdrop-blur-md">
+              站长使用过
+            </div>
+          </div>
+        )}
         {/* Animated Glow Overlay */}
         <AnimatePresence>
           {isHovered && (
